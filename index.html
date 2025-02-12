@@ -3,93 +3,105 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>폼 생성기</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        const GITHUB_TOKEN = "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"; // GitHub 개인 액세스 토큰 입력
-        const GIST_ID = "ed3179fe15a96918f42968c3bb8bd826"; // Gist ID 입력
-        const GIST_FILENAME = "forms.json"; // Gist에 저장할 파일명
-
-        async function fetchGist() {
-            let response = await fetch(`https://api.github.com/gists/${GIST_ID}`);
-            let gist = await response.json();
-            return JSON.parse(gist.files[GIST_FILENAME].content || "{}");
+    <title>폼 빌더</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            flex-direction: column;
+            background: #f4f4f9;
         }
-
-        async function updateGist(data) {
-            await fetch(`https://api.github.com/gists/${GIST_ID}`, {
-                method: "PATCH",
-                headers: {
-                    "Authorization": `token ${GITHUB_TOKEN}`,
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                    files: { [GIST_FILENAME]: { content: JSON.stringify(data, null, 2) } }
-                })
-            });
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            width: 300px;
         }
-
-        document.addEventListener("DOMContentLoaded", async function () {
-            let params = new URLSearchParams(window.location.search);
-            let formId = params.get("id");
-            let allForms = await fetchGist();
-
-            if (!formId) {
-                formId = Math.random().toString(36).substr(2, 9);
-                document.getElementById("form-section").classList.remove("hidden");
-                document.getElementById("generate-link").addEventListener("click", async function () {
-                    let formTitle = document.getElementById("form-title").value;
-                    let formDesc = document.getElementById("form-desc").value;
-                    
-                    if (formTitle.trim() === "") {
-                        alert("폼 제목을 입력하세요.");
-                        return;
-                    }
-                    
-                    allForms[formId] = { title: formTitle, desc: formDesc, responses: [] };
-                    await updateGist(allForms);
-
-                    let formUrl = `${window.location.origin}?id=${formId}`;
-                    document.getElementById("generated-link").innerHTML = `<a href="${formUrl}" class="text-blue-500 underline">${formUrl}</a>`;
-                });
-            } else {
-                document.getElementById("submit-section").classList.remove("hidden");
-                if (allForms[formId]) {
-                    document.getElementById("form-title-display").innerText = allForms[formId].title;
-                    document.getElementById("form-desc-display").innerText = allForms[formId].desc;
-                }
-                
-                document.getElementById("submit-form").addEventListener("click", async function () {
-                    let response = document.getElementById("response-input").value;
-                    if (response.trim() === "") {
-                        alert("내용을 입력하세요.");
-                        return;
-                    }
-                    
-                    allForms[formId].responses.push(response);
-                    await updateGist(allForms);
-                    alert("제출 완료!");
-                });
-            }
-        });
-    </script>
+        input, button {
+            width: 100%;
+            padding: 10px;
+            margin-top: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        button {
+            background: blue;
+            color: white;
+            border: none;
+            cursor: pointer;
+            opacity: 0.7;
+        }
+        button:enabled {
+            opacity: 1;
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
 </head>
-<body class="bg-gray-100 flex justify-center items-center h-screen">
-    <div class="bg-white p-6 rounded-2xl shadow-lg w-96">
-        <div id="form-section" class="hidden">
-            <h2 class="text-xl font-bold mb-4">폼 생성</h2>
-            <input type="text" id="form-title" placeholder="폼 제목" class="w-full p-2 border rounded-md mb-2">
-            <textarea id="form-desc" placeholder="폼 설명" class="w-full p-2 border rounded-md mb-2"></textarea>
-            <button id="generate-link" class="w-full bg-blue-500 text-white py-2 rounded-md">링크 생성</button>
-            <div id="generated-link" class="mt-4 text-center"></div>
-        </div>
-        
-        <div id="submit-section" class="hidden">
-            <h2 class="text-xl font-bold mb-2" id="form-title-display"></h2>
-            <p class="mb-4" id="form-desc-display"></p>
-            <textarea id="response-input" placeholder="답변을 입력하세요" class="w-full p-2 border rounded-md mb-2"></textarea>
-            <button id="submit-form" class="w-full bg-green-500 text-white py-2 rounded-md">제출</button>
-        </div>
+<body>
+    <div class="container" id="form-builder">
+        <h3>폼 빌더</h3>
+        <input type="text" id="question" placeholder="질문을 입력하세요" />
+        <button onclick="createForm()">폼 생성</button>
+        <p id="share-link" class="hidden"></p>
     </div>
+    <script>
+        function createForm() {
+            const question = document.getElementById('question').value;
+            if (!question.trim()) return alert("질문을 입력하세요.");
+            
+            const formId = 'form_' + Date.now();
+            const formData = { question, responses: [] };
+            localStorage.setItem(formId, JSON.stringify(formData));
+            
+            const shareLink = `${window.location.href}?id=${formId}`;
+            document.getElementById('share-link').innerText = `공유 링크: ${shareLink}`;
+            document.getElementById('share-link').classList.remove('hidden');
+        }
+
+        function loadForm() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const formId = urlParams.get('id');
+            if (formId && localStorage.getItem(formId)) {
+                document.getElementById('form-builder').innerHTML = '';
+                const formData = JSON.parse(localStorage.getItem(formId));
+                
+                const container = document.createElement('div');
+                container.className = 'container';
+                
+                const title = document.createElement('h3');
+                title.innerText = formData.question;
+                
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.placeholder = '답변을 입력하세요';
+                input.oninput = () => {
+                    submitButton.disabled = !input.value.trim();
+                };
+                
+                const submitButton = document.createElement('button');
+                submitButton.innerText = '제출';
+                submitButton.disabled = true;
+                submitButton.onclick = () => {
+                    formData.responses.push(input.value.trim());
+                    localStorage.setItem(formId, JSON.stringify(formData));
+                    alert("제출되었습니다!");
+                    location.reload();
+                };
+                
+                container.appendChild(title);
+                container.appendChild(input);
+                container.appendChild(submitButton);
+                document.body.appendChild(container);
+            }
+        }
+
+        window.onload = loadForm;
+    </script>
 </body>
 </html>
