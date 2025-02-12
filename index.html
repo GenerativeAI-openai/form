@@ -6,13 +6,38 @@
     <title>폼 생성기</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
-        document.addEventListener("DOMContentLoaded", function() {
+        const GITHUB_TOKEN = "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"; // GitHub 개인 액세스 토큰 입력
+        const GIST_ID = "ed3179fe15a96918f42968c3bb8bd826"; // Gist ID 입력
+        const GIST_FILENAME = "forms.json"; // Gist에 저장할 파일명
+
+        async function fetchGist() {
+            let response = await fetch(`https://api.github.com/gists/${GIST_ID}`);
+            let gist = await response.json();
+            return JSON.parse(gist.files[GIST_FILENAME].content || "{}");
+        }
+
+        async function updateGist(data) {
+            await fetch(`https://api.github.com/gists/${GIST_ID}`, {
+                method: "PATCH",
+                headers: {
+                    "Authorization": `token ${GITHUB_TOKEN}`,
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    files: { [GIST_FILENAME]: { content: JSON.stringify(data, null, 2) } }
+                })
+            });
+        }
+
+        document.addEventListener("DOMContentLoaded", async function () {
             let params = new URLSearchParams(window.location.search);
-            let formId = params.get("id") || Math.random().toString(36).substr(2, 9);
-            
-            if (!params.get("id")) {
+            let formId = params.get("id");
+            let allForms = await fetchGist();
+
+            if (!formId) {
+                formId = Math.random().toString(36).substr(2, 9);
                 document.getElementById("form-section").classList.remove("hidden");
-                document.getElementById("generate-link").addEventListener("click", function() {
+                document.getElementById("generate-link").addEventListener("click", async function () {
                     let formTitle = document.getElementById("form-title").value;
                     let formDesc = document.getElementById("form-desc").value;
                     
@@ -21,28 +46,28 @@
                         return;
                     }
                     
-                    localStorage.setItem(`form-${formId}`, JSON.stringify({ title: formTitle, desc: formDesc, responses: [] }));
+                    allForms[formId] = { title: formTitle, desc: formDesc, responses: [] };
+                    await updateGist(allForms);
+
                     let formUrl = `${window.location.origin}?id=${formId}`;
                     document.getElementById("generated-link").innerHTML = `<a href="${formUrl}" class="text-blue-500 underline">${formUrl}</a>`;
                 });
             } else {
                 document.getElementById("submit-section").classList.remove("hidden");
-                let formData = JSON.parse(localStorage.getItem(`form-${formId}`) || "null");
-                if (formData) {
-                    document.getElementById("form-title-display").innerText = formData.title;
-                    document.getElementById("form-desc-display").innerText = formData.desc;
+                if (allForms[formId]) {
+                    document.getElementById("form-title-display").innerText = allForms[formId].title;
+                    document.getElementById("form-desc-display").innerText = allForms[formId].desc;
                 }
                 
-                document.getElementById("submit-form").addEventListener("click", function() {
+                document.getElementById("submit-form").addEventListener("click", async function () {
                     let response = document.getElementById("response-input").value;
                     if (response.trim() === "") {
                         alert("내용을 입력하세요.");
                         return;
                     }
                     
-                    let storedData = JSON.parse(localStorage.getItem(`form-${formId}`));
-                    storedData.responses.push(response);
-                    localStorage.setItem(`form-${formId}`, JSON.stringify(storedData));
+                    allForms[formId].responses.push(response);
+                    await updateGist(allForms);
                     alert("제출 완료!");
                 });
             }
