@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>폼 생성기</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            let params = new URLSearchParams(window.location.search);
+            let formId = params.get("id") || Math.random().toString(36).substr(2, 9);
+            
+            if (!params.get("id")) {
+                document.getElementById("form-section").classList.remove("hidden");
+                document.getElementById("generate-link").addEventListener("click", function() {
+                    let formTitle = document.getElementById("form-title").value;
+                    let formDesc = document.getElementById("form-desc").value;
+                    
+                    if (formTitle.trim() === "") {
+                        alert("폼 제목을 입력하세요.");
+                        return;
+                    }
+                    
+                    localStorage.setItem(`form-${formId}`, JSON.stringify({ title: formTitle, desc: formDesc, responses: [] }));
+                    let formUrl = `${window.location.origin}?id=${formId}`;
+                    document.getElementById("generated-link").innerHTML = `<a href="${formUrl}" class="text-blue-500 underline">${formUrl}</a>`;
+                });
+            } else {
+                document.getElementById("submit-section").classList.remove("hidden");
+                let formData = JSON.parse(localStorage.getItem(`form-${formId}`) || "null");
+                if (formData) {
+                    document.getElementById("form-title-display").innerText = formData.title;
+                    document.getElementById("form-desc-display").innerText = formData.desc;
+                }
+                
+                document.getElementById("submit-form").addEventListener("click", function() {
+                    let response = document.getElementById("response-input").value;
+                    if (response.trim() === "") {
+                        alert("내용을 입력하세요.");
+                        return;
+                    }
+                    
+                    let storedData = JSON.parse(localStorage.getItem(`form-${formId}`));
+                    storedData.responses.push(response);
+                    localStorage.setItem(`form-${formId}`, JSON.stringify(storedData));
+                    alert("제출 완료!");
+                });
+            }
+        });
+    </script>
+</head>
+<body class="bg-gray-100 flex justify-center items-center h-screen">
+    <div class="bg-white p-6 rounded-2xl shadow-lg w-96">
+        <div id="form-section" class="hidden">
+            <h2 class="text-xl font-bold mb-4">폼 생성</h2>
+            <input type="text" id="form-title" placeholder="폼 제목" class="w-full p-2 border rounded-md mb-2">
+            <textarea id="form-desc" placeholder="폼 설명" class="w-full p-2 border rounded-md mb-2"></textarea>
+            <button id="generate-link" class="w-full bg-blue-500 text-white py-2 rounded-md">링크 생성</button>
+            <div id="generated-link" class="mt-4 text-center"></div>
+        </div>
+        
+        <div id="submit-section" class="hidden">
+            <h2 class="text-xl font-bold mb-2" id="form-title-display"></h2>
+            <p class="mb-4" id="form-desc-display"></p>
+            <textarea id="response-input" placeholder="답변을 입력하세요" class="w-full p-2 border rounded-md mb-2"></textarea>
+            <button id="submit-form" class="w-full bg-green-500 text-white py-2 rounded-md">제출</button>
+        </div>
+    </div>
+</body>
+</html>
